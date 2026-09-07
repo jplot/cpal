@@ -30,9 +30,16 @@ use objc2_core_audio::{
     kAudioDevicePropertyBufferFrameSizeRange, kAudioDevicePropertyDeviceUID,
     kAudioDevicePropertyLatency, kAudioDevicePropertyNominalSampleRate,
     kAudioDevicePropertySafetyOffset, kAudioDevicePropertyStreamConfiguration,
-    kAudioDevicePropertyStreamFormat, kAudioDevicePropertyTransportType, kAudioObjectPropertyClass,
-    kAudioObjectPropertyElementMain, kAudioObjectPropertyScopeGlobal,
-    kAudioObjectPropertyScopeInput, kAudioObjectPropertyScopeOutput,
+    kAudioDevicePropertyStreamFormat, kAudioDevicePropertyTransportType,
+    kAudioDeviceTransportTypeAVB, kAudioDeviceTransportTypeAggregate,
+    kAudioDeviceTransportTypeAirPlay, kAudioDeviceTransportTypeBluetooth,
+    kAudioDeviceTransportTypeBluetoothLE, kAudioDeviceTransportTypeBuiltIn,
+    kAudioDeviceTransportTypeDisplayPort, kAudioDeviceTransportTypeFireWire,
+    kAudioDeviceTransportTypeHDMI, kAudioDeviceTransportTypePCI,
+    kAudioDeviceTransportTypeThunderbolt, kAudioDeviceTransportTypeUSB,
+    kAudioDeviceTransportTypeVirtual, kAudioObjectPropertyClass, kAudioObjectPropertyElementMain,
+    kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyScopeInput,
+    kAudioObjectPropertyScopeOutput,
 };
 use objc2_core_audio_types::{
     AudioBuffer, AudioBufferList, AudioStreamBasicDescription, AudioValueRange,
@@ -415,7 +422,7 @@ impl Device {
         };
 
         let mut transport: u32 = 0;
-        let data_size = size_of::<u32>() as u32;
+        let mut data_size = size_of::<u32>() as u32;
 
         // SAFETY: AudioObjectGetPropertyData writes a UInt32 for
         // kAudioDevicePropertyTransportType. The status is checked before use.
@@ -425,7 +432,7 @@ impl Device {
                 NonNull::from(&property_address),
                 0,
                 null(),
-                NonNull::from(&data_size),
+                NonNull::from(&mut data_size),
                 NonNull::from(&mut transport).cast(),
             )
         };
@@ -433,32 +440,23 @@ impl Device {
             return None;
         }
 
-        // Four-character codes from AudioHardwareBase.h.
-        const BUILT_IN: u32 = u32::from_be_bytes(*b"bltn");
-        const USB: u32 = u32::from_be_bytes(*b"usb ");
-        const BLUETOOTH: u32 = u32::from_be_bytes(*b"blue");
-        const BLUETOOTH_LE: u32 = u32::from_be_bytes(*b"blea");
-        const VIRTUAL: u32 = u32::from_be_bytes(*b"virt");
-        const AGGREGATE: u32 = u32::from_be_bytes(*b"grup");
-        const THUNDERBOLT: u32 = u32::from_be_bytes(*b"thun");
-        const HDMI: u32 = u32::from_be_bytes(*b"hdmi");
-        const DISPLAY_PORT: u32 = u32::from_be_bytes(*b"dprt");
-        const FIREWIRE: u32 = u32::from_be_bytes(*b"1394");
-        const PCI: u32 = u32::from_be_bytes(*b"pci ");
-        const AIRPLAY: u32 = u32::from_be_bytes(*b"airp");
-
+        #[allow(non_upper_case_globals)]
         match transport {
-            BUILT_IN => Some(InterfaceType::BuiltIn),
-            USB => Some(InterfaceType::Usb),
-            BLUETOOTH | BLUETOOTH_LE => Some(InterfaceType::Bluetooth),
-            VIRTUAL => Some(InterfaceType::Virtual),
-            AGGREGATE => Some(InterfaceType::Aggregate),
-            THUNDERBOLT => Some(InterfaceType::Thunderbolt),
-            HDMI => Some(InterfaceType::Hdmi),
-            DISPLAY_PORT => Some(InterfaceType::DisplayPort),
-            FIREWIRE => Some(InterfaceType::FireWire),
-            PCI => Some(InterfaceType::Pci),
-            AIRPLAY => Some(InterfaceType::Network),
+            kAudioDeviceTransportTypeBuiltIn => Some(InterfaceType::BuiltIn),
+            kAudioDeviceTransportTypeUSB => Some(InterfaceType::Usb),
+            kAudioDeviceTransportTypeBluetooth | kAudioDeviceTransportTypeBluetoothLE => {
+                Some(InterfaceType::Bluetooth)
+            }
+            kAudioDeviceTransportTypeVirtual => Some(InterfaceType::Virtual),
+            kAudioDeviceTransportTypeAggregate => Some(InterfaceType::Aggregate),
+            kAudioDeviceTransportTypeThunderbolt => Some(InterfaceType::Thunderbolt),
+            kAudioDeviceTransportTypeHDMI => Some(InterfaceType::Hdmi),
+            kAudioDeviceTransportTypeDisplayPort => Some(InterfaceType::DisplayPort),
+            kAudioDeviceTransportTypeFireWire => Some(InterfaceType::FireWire),
+            kAudioDeviceTransportTypePCI => Some(InterfaceType::Pci),
+            kAudioDeviceTransportTypeAirPlay | kAudioDeviceTransportTypeAVB => {
+                Some(InterfaceType::Network)
+            }
             _ => None,
         }
     }
